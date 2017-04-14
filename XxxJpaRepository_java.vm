@@ -1,0 +1,22 @@
+#checkId($entity)
+#parse("include/init_var_global.vm")
+#parse("include/init_var_entity.vm")
+#parse("include/java_header.vm")
+package ${target.javaPackageFromFolder($SRC)};
+
+import org.springframework.data.repository.PagingAndSortingRepository;
+import org.demo.persistence.impl.jpa.record.${entity.name}JpaRecord;
+#if ( $entity.hasCompositePrimaryKey() )
+import org.demo.persistence.impl.jpa.record.${entity.name}JpaRecordKey;
+#set($keyType = "${entity.name}JpaRecordKey")
+#else
+#set($keyType = ${entity.keyAttribute.wrapperType})
+#end
+
+/**
+ * Repository : ${entity.name}.
+ */
+
+public interface ${entity.name}JpaRepository extends PagingAndSortingRepository<${entity.name}JpaRecord, $keyType> {
+
+}

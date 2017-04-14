@@ -1,0 +1,188 @@
+#checkId($entity)
+#parse("include/init_var_global.vm")
+#parse("include/init_var_entity.vm")
+#parse("include/java_header.vm")
+package ${target.javaPackageFromFolder($SRC)};
+
+import java.util.List;
+
+#foreach( $import in $java.imports($entity.keyAttributes) )
+import $import;
+#end
+
+import javax.inject.Named;
+import org.demo.data.repository.jpa.${entity.name}JpaRepository;
+import org.demo.persistence.impl.jpa.mapper.${entity.name}JpaMapper;
+import org.demo.persistence.impl.jpa.record.${entity.name}JpaRecord; // "JPA Record" class (with JPA mapping) 
+#if( $entity.hasCompositePrimaryKey() )
+import org.demo.persistence.impl.jpa.record.${entity.name}JpaRecordKey;
+#end
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+
+import ${recordPackage}.${recordClass};
+import ${ROOT_PKG}.persistence.${persistenceService};
+
+/**
+ * ${entity.name} persistence service - Spring Data Jpa implementation 
+ * @author Telosys
+ *
+ */
+@Named("${entity.name}Persistence")
+@Component
+@Transactional
+public class ${entity.name}PersistenceJpa implements ${entity.name}Persistence {
+
+	@Autowired
+	private ${entity.name}JpaRepository repository;
+	private final ${entity.name}JpaMapper mapper = new ${entity.name}JpaMapper();
+
+	//-------------------------------------------------------------------------------------
+	// SETTERS
+	//-------------------------------------------------------------------------------------
+	public void set${entity.name}JpaRepository(${entity.name}JpaRepository repository) {
+		this.repository = repository;
+	}
+#if( $entity.hasCompositePrimaryKey() )
+	//-------------------------------------------------------------------------------------
+	// Util methods 
+	//-------------------------------------------------------------------------------------
+
+	private ${entity.name}JpaRecordKey buildKey(${entity.name}Record record){
+		return new  ${entity.name}JpaRecordKey( $fn.argumentsListWithGetter("record",$keyFields) );
+	}
+	
+	private ${entity.name}JpaRecordKey buildKey($fn.argumentsListWithWrapperType($keyFields) ){
+		return new ${entity.name}JpaRecordKey( $fn.argumentsList($keyFields) );
+	}
+#else
+#end
+	//-------------------------------------------------------------------------------------
+	// Persistence interface implementations
+	//-------------------------------------------------------------------------------------
+
+	@Override
+	public ${entity.name}Record findById($fn.argumentsListWithWrapperType($keyFields) ) {
+#if( $entity.hasCompositePrimaryKey() )
+		${entity.name}JpaRecordKey key = buildKey( $fn.argumentsList($keyFields) );
+		${entity.name}JpaRecord entity = repository.findOne(key);		
+#else
+		${entity.name}JpaRecord entity = repository.findOne($fn.argumentsList($keyFields) );
+#end
+		return mapper.mapEntityToRecord(entity);
+	}
+
+	@Override
+	public List<${entity.name}Record> findAll() {
+		List<${entity.name}JpaRecord> entities = (List<${entity.name}JpaRecord>) repository.findAll();
+		List<${entity.name}Record> records = new java.util.LinkedList<${entity.name}Record>();
+		for (${entity.name}JpaRecord entity : entities) {
+			records.add(mapper.mapEntityToRecord(entity));
+		}
+		return records;
+	}
+
+	@Override
+	public ${entity.name}Record create(${entity.name}Record record) {
+#if( $entity.hasCompositePrimaryKey() )
+		${entity.name}JpaRecordKey key = buildKey(record);
+		${entity.name}JpaRecord entity = repository.findOne(key);		
+#else
+		${entity.name}JpaRecord entity = repository.findOne($fn.argumentsListWithGetter("record",$keyFields) );
+#end
+		if (entity != null) {
+			throw new IllegalStateException("already.exists");
+		}
+		entity = new ${entity.name}JpaRecord();
+		mapper.mapRecordToEntity(record, entity);
+		${entity.name}JpaRecord entitySaved = repository.save(entity);
+		return mapper.mapEntityToRecord(entitySaved);
+	}
+
+	@Override
+	public boolean update(${entity.name}Record record) {
+		${entity.name}JpaRecord entitySaved = null;
+#if( $entity.hasCompositePrimaryKey() )
+		${entity.name}JpaRecordKey key = buildKey(record);
+		${entity.name}JpaRecord entity = repository.findOne(key);		
+#else
+		${entity.name}JpaRecord entity = repository.findOne($fn.argumentsListWithGetter("record",$keyFields) );
+#end
+		if (entity != null) {
+			mapper.mapRecordToEntity(record, entity);
+			entitySaved = repository.save(entity);
+		}
+		return (entitySaved != null);
+	}
+
+	@Override
+	public ${entity.name}Record save(${entity.name}Record record) {
+		update(record);
+		return record;
+	}
+
+	@Override
+	public boolean deleteById($fn.argumentsListWithWrapperType($keyFields) ) {
+#if( $entity.hasCompositePrimaryKey() )
+		${entity.name}JpaRecordKey key = buildKey( $fn.argumentsList($keyFields) );		
+#end
+		if (exists($fn.argumentsList($keyFields))) {
+#if( $entity.hasCompositePrimaryKey() )
+			repository.delete(key);
+#else
+			repository.delete($fn.argumentsList($keyFields));
+#end
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	@Override
+	public boolean delete(${entity.name}Record record) {
+#if( $entity.hasCompositePrimaryKey() )
+		${entity.name}JpaRecordKey key = buildKey(record);		
+#end
+		if (exists(record)) {
+#if( $entity.hasCompositePrimaryKey() )
+		repository.delete(key);		
+#else
+			repository.delete($fn.argumentsListWithGetter("record",$keyFields) );
+#end
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public long countAll() {
+		return repository.count();
+	}
+
+	@Override
+	public boolean exists($fn.argumentsListWithWrapperType($keyFields) ) {
+#if( $entity.hasCompositePrimaryKey() )
+		${entity.name}JpaRecordKey key = buildKey( $fn.argumentsList($keyFields) );	
+		return repository.exists(key);	
+#else
+		return repository.exists($fn.argumentsList($keyFields));
+#end
+		
+	}
+
+	@Override
+	public boolean exists(${entity.name}Record record) {
+		if (record != null) {
+#if( $entity.hasCompositePrimaryKey() )
+		${entity.name}JpaRecordKey key = buildKey(record);	
+		return repository.exists(key);	
+#else
+		return repository.exists($fn.argumentsListWithGetter("record",$keyFields));
+#end
+		}
+		return false;
+	}
+
+}

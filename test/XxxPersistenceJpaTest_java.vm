@@ -1,0 +1,36 @@
+package ${target.javaPackageFromFolder($TEST_SRC)};
+
+import org.demo.persistence.${entity.name}PersistenceGenericTest;
+
+import org.demo.data.repository.jpa.${entity.name}JpaRepository;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+
+import org.demo.persistence.impl.jpa.commons.SpringJpaConfig;
+
+/**
+ * JUnit tests for ${entity.name} persistence service
+ *
+ */
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = SpringJpaConfig.class)
+@DirtiesContext(classMode = ClassMode.AFTER_CLASS)
+public class ${entity.name}PersistenceJpaTest extends ${entity.name}PersistenceGenericTest {
+	
+	@Autowired
+	private ${entity.name}JpaRepository	repository;
+
+	@Test
+	public void testPersistenceService() {
+
+    	${entity.name}PersistenceJpa persistenceService = new ${entity.name}PersistenceJpa();
+    	persistenceService.set${entity.name}JpaRepository(repository);
+
+    	testPersistenceService(persistenceService);
+	}	
+}
